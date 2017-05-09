@@ -1,19 +1,20 @@
-build:
-	xbuild src/Twilio.sln
+.PHONY: clean test install release docs
 
-develop: install-mono
-	echo "#!/bin/sh\nexec /Library/Frameworks/Mono.framework/Versions/Current/bin/mono --debug \$$MONO_OPTIONS /Library/Frameworks/Mono.framework/Versions/Current/lib/mono/4.5/nunit-console.exe \"\$$@\"" > /usr/local/bin/nunit
+clean:
+	dotnet clean
 
-install-mono:
-	brew install mono
+install:
+	dotnet restore
 
-test: build-tests
-	for i in src/*Tests/bin/Debug/*.Tests*.dll; do echo running tests "$$i"; nunit "$$i"; done
+test:
+	dotnet restore
+	dotnet build --framework netstandard1.4 src/Twilio/Twilio.csproj
+	dotnet build --framework netcoreapp1.1 test/Twilio.Test/Twilio.Test.csproj
+	dotnet run --framework netcoreapp1.1 --project test/Twilio.Test/Twilio.Test.csproj
 
-build-tests: update-packages
-	for i in src/*Tests/*.Tests*.csproj; do xbuild "$$i"; done
+release: test
+	dotnet build -c Release
+	dotnet pack src/Twilio/Twilio.csproj -c Release -o .
 
-update-packages:
-	find . -name "*.sln" | xargs -n 1 -I {} nuget restore {};
-	find . -name "*packages.config" | xargs -n 1 -I {} nuget restore {} -PackagesDirectory src/packages
-
+docs:
+	doxygen Doxyfile
